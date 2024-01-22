@@ -1,0 +1,89 @@
+<!-- index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aria's Digital Scenery</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <img src="./landscape.jpg" alt="landscape" id="source" style="display: none;">
+
+    <canvas id="sketch"></canvas>
+    <button id="gifButton">Generate GIF</button>
+
+    <script>
+        window.duration = 1600
+        window.frequency = 14
+        window.start = Date.now()
+    </script>
+
+    <script type="module">
+        import './sketch.mjs'
+    </script>
+
+    <script type="module">
+        import transform from './pipeline.mjs'
+        import generate from './renderGif.mjs'
+
+        const gifButton = document.getElementById('gifButton')
+
+        gifButton.addEventListener('click', _ => {
+            const duration = window.duration
+            const framerate = window.frequency
+            const start = window.start
+            const renderer = document.getElementById('sketch')
+
+            const img = document.getElementById('source')
+
+            console.log({
+                duration,
+                framerate,
+                start,
+                gif: {
+                    width: renderer.width,
+                    height: renderer.height,
+                },
+                img: {
+                    width: img.width,
+                    height: img.height,
+                    src: img.src
+                }
+            })
+            const canvas = new OffscreenCanvas(renderer.width, renderer.height)
+            const ctx = canvas.getContext('2d', { willReadFrequently: true })
+
+            ctx.drawImage(img,
+                0, 0, img.width, img.height,
+                0, 0, canvas.width, canvas.height)
+
+            const frames = []
+            for (let i = 0; i < duration; i += 1000 / framerate) {
+                const frame = transform(ctx, start, duration, start + i)
+                frames.push(frame)
+            }
+
+            console.log(frames.length, 'frames for ', duration / 1000, 'seconds')
+            generate(duration, frames).then(blob => {
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `landscape.gif`
+                a.click()
+            })
+        })
+    </script>
+</body>
+
+</html>
